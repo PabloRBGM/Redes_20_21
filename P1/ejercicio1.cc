@@ -11,19 +11,26 @@ int main(int argc, char** argv){
 
     memset((void*) &hints, 0, sizeof(addrinfo));
 
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_family = AF_UNSPEC;
+    //hints.ai_socktype = SOCK_DGRAM;
 
     int rc = getaddrinfo(argv[1], argv[2], &hints, &res);
-
     if(rc != 0){
         std::cerr << "[getaddrinfo]: " << gai_strerror(rc) << '\n';
         return -1;
     }
 
-    int sd = socket(res->ai_family, res->ai_socktype, 0);
+    for(auto i = res; i != nullptr; i = i->ai_next){
+        char host[NI_MAXHOST];
 
-    freeaddrinfo(res);
+        int r = getnameinfo(i->ai_addr, i->ai_addrlen, host, NI_MAXHOST, nullptr, NI_MAXSERV, NI_NUMERICHOST);
+        if(r != 0){
+            std::cerr << "[getnameinfo]: " << gai_strerror(rc) << '\n';
+            return -1;
+        }
+
+        std::cout << host << "\t" << i->ai_family <<  "\t" << i->ai_socktype << '\n';
+    }
 
     return 0;
 }
