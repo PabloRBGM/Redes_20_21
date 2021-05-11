@@ -27,61 +27,69 @@ int main(int argc, char** argv){
         return -1;
     }
 
-    bind(sd, res->ai_addr, res->ai_addrlen);
+    int ret = bind(sd, res->ai_addr, res->ai_addrlen);
+    if( ret == -1){
+        std::cerr << strerror(errno) << '\n';
+        return -1;
+    }
 
     freeaddrinfo(res);
     
     // solo necesitamos 1 caracter, el buffer un poco mas grande porsi
     char buffer[80];
     char host[NI_MAXHOST];
+    char serv[NI_MAXSERV];
 
     sockaddr cliente;
     socklen_t clienteLen = sizeof(sockaddr);
     while (true)
     {
         int bytes = recvfrom(sd, (void*)buffer, 80, 0, &cliente, &clienteLen);
-        if(bytes = -1){
+        if(bytes == -1){
             return -1;
         }
 
-        int ret = getnameinfo(&cliente, clienteLen, host, NI_MAXHOST, nullptr, NI_MAXSERV, NI_NUMERICHOST);
+        ret = getnameinfo(&cliente, clienteLen, host, NI_MAXHOST, serv, NI_MAXSERV, NI_NUMERICHOST);
         if(ret != 0){
             std::cerr << "[getnameinfo]: " << gai_strerror(rc) << '\n';
             return -1;
         }
-        //char msg[] = ;
+
         time_t _time;
+        int tam = 0;
         switch (buffer[0])
         {
-        case 't':
-        {
-            time(&_time);
-            bytes = strftime(buffer, 80, "%X %p", localtime(&_time));
-            ret = sendto(sd, buffer, bytes, 0, &cliente, clienteLen);
-            if(ret == -1){
-                return -1;
-            break;
-        }
-        case 'd':
-            time(&_time);
-            bytes = strftime(buffer, 80, "%Y-%m-%d",localtime(&_time));
-            ret = sendto(sd, buffer, bytes, 0, &cliente, clienteLen);
-            if(ret == -1){
-                return -1;
+            case 't':
+            {
+                time(&_time);
+                tam = strftime(buffer, 80, "%X %p", localtime(&_time));
+                ret = sendto(sd, buffer, tam, 0, &cliente, clienteLen);
+                if(ret == -1)
+                    return -1;
+                break;
             }
-            break;
-        case 'q':
-            close(sd);
-            return 0;
-            break;
-        default:
-            ret = sendto(sd, "Command not supported", 22, 0, &cliente, clienteLen);
-            if(ret == -1){
-                return -1;
+            case 'd':
+            {
+                time(&_time);
+                tam = strftime(buffer, 80, "%Y-%m-%d",localtime(&_time));
+                ret = sendto(sd, buffer, tam, 0, &cliente, clienteLen);
+                if(ret == -1)
+                    return -1;
+                break;
             }
-            break;
+            case 'q':
+            {
+                std::cout << "Saliendo\n";
+                close(sd);
+                return 0;
+            }
+            default:
+            {
+                std::cout << "Command not supported " << buffer[0] << "\n";        
+                break;
+            }
         }
-        //std::cout << host << "\t" << i->ai_family <<  "\t" << i->ai_socktype << '\n';
+        std::cout << bytes << " bytes de " << host << ":" << serv << '\n';
 
     }
     
