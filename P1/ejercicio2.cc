@@ -32,14 +32,14 @@ int main(int argc, char** argv){
     freeaddrinfo(res);
     
     // solo necesitamos 1 caracter, el buffer un poco mas grande porsi
-    char buffer[10];
+    char buffer[80];
     char host[NI_MAXHOST];
 
     sockaddr cliente;
     socklen_t clienteLen = sizeof(sockaddr);
     while (true)
     {
-        int bytes = recvfrom(sd, (void*)buffer, 10, 0, &cliente, &clienteLen);
+        int bytes = recvfrom(sd, (void*)buffer, 80, 0, &cliente, &clienteLen);
         if(bytes = -1){
             return -1;
         }
@@ -49,30 +49,23 @@ int main(int argc, char** argv){
             std::cerr << "[getnameinfo]: " << gai_strerror(rc) << '\n';
             return -1;
         }
-        char msg[] = ;
-        
+        //char msg[] = ;
+        time_t _time;
         switch (buffer[0])
         {
         case 't':
         {
-            char timeBuff[80];
-            time_t _time;
             time(&_time);
-            tm* t = localtime(&_time);
-            bytes = strftime(timeBuff, 80, "%H:%M:%S",t);
-            ret = sendto(sd, timeBuff, bytes, 0, &cliente, clienteLen);
+            bytes = strftime(buffer, 80, "%X %p", localtime(&_time));
+            ret = sendto(sd, buffer, bytes, 0, &cliente, clienteLen);
             if(ret == -1){
                 return -1;
-
             break;
         }
         case 'd':
-            char timeBuff[80];
-            time_t _time;
             time(&_time);
-            tm* t = localtime(&_time);
-            bytes = strftime(timeBuff, 80, "%H:%M:%S",t);
-            ret = sendto(sd, timeBuff, bytes, 0, &cliente, clienteLen);
+            bytes = strftime(buffer, 80, "%Y-%m-%d",localtime(&_time));
+            ret = sendto(sd, buffer, bytes, 0, &cliente, clienteLen);
             if(ret == -1){
                 return -1;
             }
