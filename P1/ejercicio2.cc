@@ -62,7 +62,9 @@ int main(int argc, char** argv){
             case 't':
             {
                 time(&_time);
-                tam = strftime(buffer, 80, "%X %p", localtime(&_time));
+                tam = strftime(buffer, 79, "%X %p", localtime(&_time));
+                buffer[tam] = '\0';
+                std::cout << tam << buffer << '\n';
                 ret = sendto(sd, buffer, tam, 0, &cliente, clienteLen);
                 if(ret == -1)
                     return -1;
@@ -72,6 +74,7 @@ int main(int argc, char** argv){
             {
                 time(&_time);
                 tam = strftime(buffer, 80, "%Y-%m-%d",localtime(&_time));
+                buffer[tam] = '\0';
                 ret = sendto(sd, buffer, tam, 0, &cliente, clienteLen);
                 if(ret == -1)
                     return -1;
@@ -90,7 +93,6 @@ int main(int argc, char** argv){
             }
         }
         std::cout << bytes << " bytes de " << host << ":" << serv << '\n';
-
     }
     
     return 0;
