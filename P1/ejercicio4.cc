@@ -50,24 +50,19 @@ int main(int argc, char** argv){
     int cliente_sd;
     sockaddr cliente;
     socklen_t clienteLen = sizeof(sockaddr);
-
+    cliente_sd = accept(sd, &cliente, &clienteLen);
+    if(cliente_sd < 0){
+        std::cerr << strerror(errno) << '\n';
+        return -1;
+    }
+    ret = getnameinfo(&cliente, clienteLen, host, NI_MAXHOST, serv, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
+    if(ret < 0){
+        std::cerr << "[getnameinfo]: " << gai_strerror(rc) << '\n';
+        return -1;
+    }
+    std::cout << "Conexión desde " << host << " " << serv << '\n';
     while (1)
     {   
-        // esperamos conexión
-        cliente_sd = accept(sd, &cliente, &clienteLen);
-        if(cliente_sd < 0){
-            std::cerr << strerror(errno) << '\n';
-            return -1;
-        }
-        ret = getnameinfo(&cliente, clienteLen, host, NI_MAXHOST, serv, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
-        if(ret < 0){
-            std::cerr << "[getnameinfo]: " << gai_strerror(rc) << '\n';
-            return -1;
-        }
-        std::cout << "Conexión desde " << host << " " << serv << '\n';
-
-        // con el while puedo dejar clientes en cola
-        //while(1){
         bytes = recv(cliente_sd, (void*)buffer, 79, 0); 
         if(bytes <= 0){
             std::cout << "Conection Ended\n";
@@ -75,7 +70,6 @@ int main(int argc, char** argv){
         }             
         buffer[bytes] = '\0';
         send(cliente_sd, buffer, bytes, 0);
-        //} 
     }
     
     if(close(sd) == -1){
