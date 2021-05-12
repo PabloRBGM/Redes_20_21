@@ -8,6 +8,11 @@
 #include <unistd.h>
 
 int main(int argc, char** argv){
+    if(argc != 3){
+        std::cout << "Incorrect format\n";
+        return 0;
+    }
+
     addrinfo hints;
     addrinfo *res;
     int backlog = 5;
@@ -29,15 +34,15 @@ int main(int argc, char** argv){
         return -1;
     }
 
-    int ret = bind(sd, res->ai_addr, res->ai_addrlen);
-    if( ret == -1){
+    
+    if(bind(sd, res->ai_addr, res->ai_addrlen) < 0){
         std::cerr << strerror(errno) << '\n';
         return -1;
     }
+
     freeaddrinfo(res);
 
-    ret = listen(sd, backlog);
-    if(ret == -1){
+    if(listen(sd, backlog) < 0){
         std::cerr << strerror(errno) << '\n';
         return -1;
     }
@@ -55,15 +60,15 @@ int main(int argc, char** argv){
         std::cerr << strerror(errno) << '\n';
         return -1;
     }
-    ret = getnameinfo(&cliente, clienteLen, host, NI_MAXHOST, serv, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
-    if(ret < 0){
+    rc = getnameinfo(&cliente, clienteLen, host, NI_MAXHOST, serv, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
+    if(rc != 0){
         std::cerr << "[getnameinfo]: " << gai_strerror(rc) << '\n';
         return -1;
     }
     std::cout << "Conexión desde " << host << " " << serv << '\n';
     while (1)
     {   
-        bytes = recv(cliente_sd, (void*)buffer, 79, 0); 
+        bytes = recv(cliente_sd, (void*)buffer, 80, 0); 
         if(bytes <= 0){
             std::cout << "Conection Ended\n";
             break;
