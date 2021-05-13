@@ -22,33 +22,29 @@ private:
     std::thread _thread;   
 public:
     my_thread() {}
-    my_thread(int sd) : _thread(receive, sd){}
-    void join(){
-        _thread.join();
-    }
-    int receive(int _sd){
+    static int receive(my_thread* th, int _sd){
         while (1)
         {
-            bytes = recvfrom(_sd, (void*)buffer, 80, 0, &cliente, &clienteLen);
-            if(bytes < 0){
+            th->bytes = recvfrom(_sd, (void*)th->buffer, 80, 0, &th->cliente, &th->clienteLen);
+            if(th->bytes < 0){
                 std::cerr << strerror(errno) << '\n';
                 return -1;
             }
 
-            int rc = getnameinfo(&cliente, clienteLen, host, NI_MAXHOST, serv, NI_MAXSERV, NI_NUMERICHOST);
+            int rc = getnameinfo(&th->cliente, th->clienteLen, th->host, NI_MAXHOST, th->serv, NI_MAXSERV, NI_NUMERICHOST);
             if(rc != 0){
                 std::cerr << "[getnameinfo]: " << gai_strerror(rc) << '\n';
                 return -1;
             }
 
-            switch (buffer[0])
+            switch (th->buffer[0])
             {
                 case 't':
                 {
-                    time(&_time);
-                    tam = strftime(buffer, 80, "%X %p", localtime(&_time));
-                    buffer[tam] = '\0';
-                    if(sendto(_sd, buffer, tam, 0, &cliente, clienteLen) < 0){
+                    time(&th->_time);
+                    th->tam = strftime(th->buffer, 80, "%X %p", localtime(&th->_time));
+                    th->buffer[th->tam] = '\0';
+                    if(sendto(_sd, th->buffer, th->tam, 0, &th->cliente, th->clienteLen) < 0){
                         std::cerr << strerror(errno) << '\n';
                         return -1;
                     }                
@@ -56,10 +52,10 @@ public:
                 }
                 case 'd':
                 {
-                    time(&_time);
-                    tam = strftime(buffer, 80, "%Y-%m-%d",localtime(&_time));
-                    buffer[tam] = '\0';
-                    if(sendto(_sd, buffer, tam, 0, &cliente, clienteLen) < 0){
+                    time(&th->_time);
+                    th->tam = strftime(th->buffer, 80, "%Y-%m-%d",localtime(&th->_time));
+                    th->buffer[th->tam] = '\0';
+                    if(sendto(_sd, th->buffer, th->tam, 0, &th->cliente, th->clienteLen) < 0){
                         std::cerr << strerror(errno) << '\n';
                         return -1;
                     }   
@@ -68,23 +64,26 @@ public:
                 case 'q':
                 {
                     std::cout << "Exiting\n";
+                    exit(0);
                     close(_sd);
                     return 0;
                 }
                 default:
                 { 
-                    if(sendto(_sd, "Command not supported", 24, 0, &cliente, clienteLen) < 0){
+                    if(sendto(_sd, "Command not supported", 24, 0, &th->cliente, th->clienteLen) < 0){
                         std::cerr << strerror(errno) << '\n';
                         return -1;
                     }   
-                    std::cout << "Command not supported " << buffer[0] << "\n";        
+                    std::cout << "Command not supported " << th->buffer[0] << "\n";        
                     break;
                 }
             }
-            std::cout << bytes << " bytes from " << host << ":" << serv << " Th_ID: " << _thread.get_id() << '\n';
+            std::cout << th->bytes << " bytes from " << th->host << ":" << th->serv << "\nTh_ID: " << std::this_thread::get_id() << '\n';
             sleep(3);
         }
     }
+    my_thread(int sd) : _thread(std::thread(receive, this, sd)){}
+    void join(){ _thread.join(); }
 };
 
 int main(int argc, char** argv){
