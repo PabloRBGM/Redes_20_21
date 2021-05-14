@@ -8,82 +8,81 @@
 #include <unistd.h>
 #include <thread>
 
-class my_thread{
+class my_udp_thread{
 private:
-    char buffer[80];
-    int bytes;
-    char host[NI_MAXHOST];
-    char serv[NI_MAXSERV];
-    sockaddr cliente;
-    socklen_t clienteLen = sizeof(sockaddr);
-    time_t _time;
-    int tam = 0;
-
-    std::thread _thread;   
+    int _sd;  
 public:
-    my_thread() {}
-    static int receive(my_thread* th, int _sd){
+    my_udp_thread(int sd) : _sd(sd){}
+    ~my_udp_thread(){}
+    void time_serv(){
+        char buffer[80];
+        int bytes;
+        char host[NI_MAXHOST];
+        char serv[NI_MAXSERV];
+        sockaddr cliente;
+        socklen_t clienteLen = sizeof(sockaddr);
+        time_t _time;
+        int tam = 0;
+
         while (1)
         {
-            th->bytes = recvfrom(_sd, (void*)th->buffer, 80, 0, &th->cliente, &th->clienteLen);
-            if(th->bytes < 0){
+            bytes = recvfrom(_sd, (void*)buffer, 80, 0, &cliente, &clienteLen);
+            if(bytes < 0){
                 std::cerr << strerror(errno) << '\n';
-                return -1;
+                continue;
             }
 
-            int rc = getnameinfo(&th->cliente, th->clienteLen, th->host, NI_MAXHOST, th->serv, NI_MAXSERV, NI_NUMERICHOST);
+            int rc = getnameinfo(&cliente, clienteLen, host, NI_MAXHOST, serv, NI_MAXSERV, NI_NUMERICHOST);
             if(rc != 0){
                 std::cerr << "[getnameinfo]: " << gai_strerror(rc) << '\n';
-                return -1;
+                continue;
             }
 
-            switch (th->buffer[0])
+            switch (buffer[0])
             {
                 case 't':
                 {
-                    time(&th->_time);
-                    th->tam = strftime(th->buffer, 80, "%X %p", localtime(&th->_time));
-                    th->buffer[th->tam] = '\0';
-                    if(sendto(_sd, th->buffer, th->tam, 0, &th->cliente, th->clienteLen) < 0){
+                    time(&_time);
+                    tam = strftime(buffer, 80, "%X %p", localtime(&_time));
+                    buffer[tam] = '\0';
+                    if(sendto(_sd, buffer, tam, 0, &cliente, clienteLen) < 0){
                         std::cerr << strerror(errno) << '\n';
-                        return -1;
+                        continue;
                     }                
                     break;
                 }
                 case 'd':
                 {
-                    time(&th->_time);
-                    th->tam = strftime(th->buffer, 80, "%Y-%m-%d",localtime(&th->_time));
-                    th->buffer[th->tam] = '\0';
-                    if(sendto(_sd, th->buffer, th->tam, 0, &th->cliente, th->clienteLen) < 0){
+                    time(&_time);
+                    tam = strftime(buffer, 80, "%Y-%m-%d",localtime(&_time));
+                    buffer[tam] = '\0';
+                    if(sendto(_sd, buffer, tam, 0, &cliente, clienteLen) < 0){
                         std::cerr << strerror(errno) << '\n';
-                        return -1;
+                        continue;
                     }   
                     break;
                 }
                 case 'q':
                 {
                     std::cout << "Exiting\n";
-                    exit(0);
                     close(_sd);
-                    return 0;
+                    exit(0);                  
+                    continue;
                 }
                 default:
                 { 
-                    if(sendto(_sd, "Command not supported", 24, 0, &th->cliente, th->clienteLen) < 0){
+                    if(sendto(_sd, "Command not supported", 24, 0, &cliente, clienteLen) < 0){
                         std::cerr << strerror(errno) << '\n';
-                        return -1;
+                        continue;
                     }   
-                    std::cout << "Command not supported " << th->buffer[0] << "\n";        
+                    std::cout << "Command not supported " << buffer[0] << "\n";        
                     break;
                 }
             }
-            std::cout << th->bytes << " bytes from " << th->host << ":" << th->serv << "\nTh_ID: " << std::this_thread::get_id() << '\n';
+            std::cout << bytes << " bytes from " << host << ":" << serv << "\nTh_ID: " << std::this_thread::get_id() << '\n';
             sleep(3);
         }
     }
-    my_thread(int sd) : _thread(std::thread(receive, this, sd)){}
-    void join(){ _thread.join(); }
 };
 
 int main(int argc, char** argv){
@@ -93,7 +92,6 @@ int main(int argc, char** argv){
     }
 
     const unsigned int MAX_THREAD = 3;
-    my_thread pool[MAX_THREAD];
     addrinfo hints;
     addrinfo *res;
 
@@ -120,15 +118,23 @@ int main(int argc, char** argv){
 
     freeaddrinfo(res);
     
-    // initialize threads
+    //Threads
     for(int i = 0; i < MAX_THREAD; i++){
-        pool[i] = my_thread(sd);
+        my_udp_thread* udp_th = new my_udp_thread(sd);
+        std::thread([udp_th](){
+            udp_th->time_serv();
+        }).detach();
     }
 
-    // wait for threads
-    for(int i = 0; i < MAX_THREAD; i++){
-        pool[i].join();
+    char buffer[80];
+    while (strcmp(buffer, "q\0"))
+    {
+        std::cin >> buffer;
+    } 
+
+    if(close(sd) == -1){
+        std::cerr << strerror(errno) << '\n';
+        return -1;
     }
-    
     return 0;
 }
