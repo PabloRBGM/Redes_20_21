@@ -71,12 +71,12 @@ void ChatServer::do_messages()
         switch (msg.type)
         {
         // - LOGIN: Añadir al vector clients
-        case ChatMessage::MessageType::LOGIN:
+        case ChatMessage::LOGIN:
             clients.push_back(std::move(std::make_unique<Socket>(*client)));
             break;
 
         // - LOGOUT: Eliminar del vector clients
-        case ChatMessage::MessageType::LOGOUT:
+        case ChatMessage::LOGOUT:
             for(auto it = clients.begin(); it != clients.end(); ++it){
                 if((*it).get() == client){
                     clients.erase(it);
@@ -87,7 +87,7 @@ void ChatServer::do_messages()
             break;
 
         // - MESSAGE: Reenviar el mensaje a todos los clientes (menos el emisor)
-        case ChatMessage::MessageType::MESSAGE:
+        case ChatMessage::MESSAGE:
             for(auto it = clients.begin(); it != clients.end(); ++it){
                 if((*it).get() != client){
                     socket.send(msg, *(*it).get());
@@ -113,24 +113,41 @@ void ChatClient::login()
 
 void ChatClient::logout()
 {
-    // Completar
+    std::string msg;
+
+    ChatMessage em(nick, msg);
+    em.type = ChatMessage::LOGOUT;
+
+    socket.send(em, socket);
 }
 
 void ChatClient::input_thread()
 {
+    std::string msg;
+    
     while (true)
-    {
+    {   
         // Leer stdin con std::getline
+        std::getline(std::cin, msg);
+        
+        ChatMessage em(nick, msg);
+        em.type = ChatMessage::MESSAGE;
+
         // Enviar al servidor usando socket
+        socket.send(em, socket);
     }
 }
 
 void ChatClient::net_thread()
 {
+    ChatMessage msg;
     while(true)
     {
         //Recibir Mensajes de red
+        if(socket.recv(msg) < 0) continue;
+
         //Mostrar en pantalla el mensaje de la forma "nick: mensaje"
+        std::cout << msg.nick << ": " << msg.message << '\n';
     }
 }
 
