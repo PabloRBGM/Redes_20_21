@@ -50,12 +50,12 @@ int ChatMessage::from_bin(char * bobj)
     //memcpy(&nick, tmp, 8 * sizeof(char));
     nick = tmp;
     tmp += 8 * sizeof(char);
-    std::cout << "NICK: " << tmp << '\n'; 
+    std::cout << "NICK: " << nick << '\n'; 
     // Message
     //memcpy(&message, tmp, 80 * sizeof(char));
     message = tmp;
     //tmp += sizeof(80 * sizeof(char);
-    std::cout << "MESSAGE: " << tmp << '\n'; 
+    std::cout << "MESSAGE: " << message << '\n'; 
 
     return 0;
 }
@@ -93,21 +93,20 @@ void ChatServer::do_messages()
             // - LOGIN: Añadir al vector clients
             case ChatMessage::LOGIN:
             {
-                std::cout << "SERVER: LOGIN DE ALGUIEN\n";
+                std::cout << "SERVER: LOGIN DE: " << msg.nick << "\n";
                 clients.push_back(std::move(std::make_unique<Socket>(*client)));
-                std::cout << clients.size() << '\n';
-
+                std::cout << "NUMERO DE CLIENTES ACTUALES: " << clients.size() << "\n";
                 break;
             }
 
             // - LOGOUT: Eliminar del vector clients
             case ChatMessage::LOGOUT:
             {
-                std::cout << "SERVER: LOGOUT DE ALGUIEN\n";
+                std::cout << "SERVER: LOGOUT DE: " << msg.nick << "\n";
                 for(auto it = clients.begin(); it != clients.end(); ++it){
-                    if((*it).get() == client){
+                    if((*it->get()) == (*client)){
                         clients.erase(it);
-                        (*it).release();
+                        it->release();
                         break;
                     }
                 }
@@ -117,10 +116,10 @@ void ChatServer::do_messages()
             // - MESSAGE: Reenviar el mensaje a todos los clientes (menos el emisor)
             case ChatMessage::MESSAGE:
             {
-                std::cout << "SERVER: MESSAGE DE ALGUIEN\n";
+                std::cout << "SERVER: MESSAGE DE: " << msg.nick << "\n";
                 for(auto it = clients.begin(); it != clients.end(); ++it){
-                    if((*it).get() != client){
-                        socket.send(msg, *(*it).get());
+                    if(!( (*it->get()) == (*client) )){
+                        socket.send(msg, (*it->get()));
                     }
                 }
                 break;
@@ -183,10 +182,7 @@ void ChatClient::net_thread()
         //Recibir Mensajes de red
         if(socket.recv(msg) < 0) continue;
 
-        std::cout << "CLIENT: " + nick + " RECIBO MENSAJE\n";
-
-        //Mostrar en pantalla el mensaje de la forma "nick: mensaje"
-        std::cout << msg.nick << ": " << msg.message << '\n';
+        std::cout << "CLIENT: " + nick + " RECIBO EL SIGUIENTE MENSAJE:\n" << msg.nick << ": " << msg.message << '\n';
     }
 }
 
